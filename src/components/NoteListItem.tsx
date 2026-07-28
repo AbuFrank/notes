@@ -16,12 +16,13 @@ export function NoteListItem({ note }: { note: NoteSummary }) {
       style={styles.row}
       onPress={() =>
         router.push({
-          pathname: '/note/[uri]',
-          params: { uri: encodeURIComponent(note.uri), filename: note.filename },
+          pathname: '/note/[filename]',
+          params: { filename: note.filename },
         })
       }>
       <View style={styles.rowMain}>
         <Text style={styles.rowTitle} numberOfLines={1}>
+          {note.pinned ? '📌 ' : ''}
           {note.noteType === 'todo' ? '☑ ' : ''}
           {note.title}
         </Text>

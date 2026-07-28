@@ -8,23 +8,32 @@ import { readNote } from '@/vault/noteRepository';
 import type { NoteContent } from '@/types/note';
 
 export default function NoteScreen() {
-  const { uri, filename } = useLocalSearchParams<{ uri: string; filename: string }>();
-  const { directoryUri } = useVault();
+  const { filename } = useLocalSearchParams<{ filename: string }>();
+  const { directoryUri, notes, isLoading } = useVault();
   const [content, setContent] = useState<NoteContent | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const summary = notes.find((n) => n.filename === filename);
+
   useEffect(() => {
-    if (!uri || !filename) return;
-    const decoded = decodeURIComponent(uri);
-    readNote(decoded, filename)
+    if (!summary) return;
+    readNote(summary.uri, summary.filename)
       .then(setContent)
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load note.'));
-  }, [uri, filename]);
+  }, [summary]);
 
   if (error) {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
+  if (!summary && !isLoading) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>Note not found.</Text>
       </View>
     );
   }
@@ -43,6 +52,7 @@ export default function NoteScreen() {
       isNew={false}
       initialUri={content.uri}
       initialFilename={content.filename}
+      initialTitle={content.title}
       initialFrontmatter={content.frontmatter}
       initialBody={content.body}
     />

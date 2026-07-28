@@ -7,10 +7,17 @@ An Android note-taking app (Expo / React Native) that reads and writes its notes
 
 - Notes are plain markdown files with YAML frontmatter, saved directly into a vault folder you
   pick once via Android's Storage Access Framework — no cloud sync, no Obsidian app required.
+- Filenames are opaque, chronologically-sortable timestamps (`YY-MM-DD-HH-mm.md`) assigned once
+  at creation. The note's title lives inside the file as an `# H1` heading and can be edited
+  freely at any time — since the filename never changes, editing the title is just a normal save,
+  not a rename.
 - Multiple tags per note, stored in both frontmatter (`tags: [...]`) and inline `#hashtags`.
   Browse all tags and tap one to see the notes under it.
 - Todo mode: turn a note's body into a checklist (`- [ ]` / `- [x]`). Checking an item moves it
-  to the bottom of the list; each item has an "×" to delete it.
+  to the bottom of the list; each item has an "×" to delete it; items can also be reordered
+  manually by long-pressing the "⠿" handle and dragging.
+- Pin notes (📌 in the note editor's header) to keep them in a "Pinned" section at the top of the
+  note list and of each tag's filtered note list.
 
 ## Local development (Expo Go)
 
@@ -28,10 +35,11 @@ same Wi-Fi network as your computer:
 4. On first launch, tap **Choose folder** and pick a vault folder. Point it at a **scratch test
    folder** first (not your real vault) until you've tried the core flows — a throwaway folder
    or subfolder works fine, it just needs Android 11+ for the SAF picker.
-5. Try the full loop: create a note, add a couple of tags, confirm the Tags screen filters
-   correctly, toggle Todo mode, check an item off (it should sink to the bottom), delete a line
-   with "×" — then open that same folder directly in Obsidian and confirm it all renders there
-   too.
+5. Try the full loop: create a note, edit its title, add a couple of tags, confirm the Tags
+   screen filters correctly, toggle Todo mode, check an item off (it should sink to the bottom),
+   drag an item to reorder it via the "⠿" handle, delete a line with "×", pin the note and confirm
+   it shows under "Pinned" at the top of the list — then open that same folder directly in
+   Obsidian and confirm it all renders there too.
 
 Prefer an emulator instead of a physical device? That needs Android Studio + the Android SDK
 installed first (not set up in this repo/environment) — then `npx expo start --android` will
@@ -98,3 +106,5 @@ Obsidian to see the latest content.
   todo-checklist serialization, filename handling, and note CRUD
 - `src/context/VaultContext.tsx` — holds the picked vault folder, the note/tag index, and reload
 - `src/components/` — `NoteEditor`, `TagEditor`, `NoteListItem`
+- `patches/` — a `patch-package` fix for a `react-native-draggable-flatlist` bug; applied
+  automatically by `npm install` via the `postinstall` script

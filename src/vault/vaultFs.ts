@@ -20,7 +20,7 @@ export async function requestVaultAccess(): Promise<string | null> {
 
 /** SAF returns full content:// child URIs, not bare filenames — this derives
  * the display name from the URI's last path segment. */
-function deriveName(uri: string): string {
+export function deriveName(uri: string): string {
   const decoded = decodeURIComponent(uri);
   const segments = decoded.split('/');
   return segments[segments.length - 1] ?? '';
@@ -44,16 +44,21 @@ export async function writeNoteFile(uri: string, content: string): Promise<void>
 }
 
 /** Creates a new file in the vault folder and writes its initial content.
- * mimeType is fixed to text/plain since some SAF providers rename files to
- * match a recognized mime type's default extension. */
+ * mimeType is `application/octet-stream` — a generic type with no canonical
+ * extension in Android's MimeTypeMap — because some SAF providers (confirmed:
+ * the local storage provider) otherwise append their mime type's canonical
+ * extension to the filename (e.g. `text/plain` → `.txt`), producing files
+ * like `note.md.txt` instead of `note.md`. The actual on-disk name is always
+ * re-derived from the returned uri rather than trusted from the request, as
+ * a second line of defense against any provider that renames regardless. */
 export async function createNoteFile(
   directoryUri: string,
   filename: string,
   content: string
-): Promise<string> {
-  const uri = await StorageAccessFramework.createFileAsync(directoryUri, filename, 'text/plain');
+): Promise<VaultFile> {
+  const uri = await StorageAccessFramework.createFileAsync(directoryUri, filename, 'application/octet-stream');
   await StorageAccessFramework.writeAsStringAsync(uri, content);
-  return uri;
+  return { uri, name: deriveName(uri) };
 }
 
 export async function deleteNoteFile(uri: string): Promise<void> {

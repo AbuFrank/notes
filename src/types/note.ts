@@ -3,6 +3,7 @@ export type NoteType = 'note' | 'todo';
 export interface NoteFrontmatter {
   tags: string[];
   noteType: NoteType;
+  pinned: boolean;
   created: string;
   updated: string;
 }
@@ -20,6 +21,7 @@ export interface NoteSummary {
   title: string;
   tags: string[];
   noteType: NoteType;
+  pinned: boolean;
   updated: string;
 }
 

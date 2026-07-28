@@ -8,6 +8,9 @@
       ],
       "@/assets/*": [
         "./assets/*"
+      ],
+      "react-native-draggable-flatlist": [
+        "./node_modules/react-native-draggable-flatlist/lib/typescript/index.d.ts"
       ]
     }
   },

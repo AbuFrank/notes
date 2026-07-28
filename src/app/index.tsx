@@ -1,18 +1,24 @@
 import { Stack, useRouter } from 'expo-router';
 import { useMemo } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 
 import { NoteListItem } from '@/components/NoteListItem';
 import { useVault } from '@/context/VaultContext';
+import { splitPinned } from '@/vault/sorting';
 
 export default function NoteListScreen() {
   const { directoryUri, isLoading, error, notes, connectVault, reload } = useVault();
   const router = useRouter();
 
-  const sorted = useMemo(
-    () => [...notes].sort((a, b) => (a.updated < b.updated ? 1 : -1)),
-    [notes]
-  );
+  const sections = useMemo(() => {
+    const { pinned, rest } = splitPinned(notes);
+    return pinned.length > 0
+      ? [
+          { title: 'Pinned', data: pinned },
+          { title: 'Notes', data: rest },
+        ]
+      : [{ title: '', data: rest }];
+  }, [notes]);
 
   if (!directoryUri) {
     return (
@@ -57,15 +63,21 @@ export default function NoteListScreen() {
             <Text style={styles.primaryButtonText}>Re-pick folder</Text>
           </Pressable>
         </View>
-      ) : sorted.length === 0 ? (
+      ) : notes.length === 0 ? (
         <View style={styles.centered}>
           <Text style={styles.onboardingBody}>No notes yet. Tap + New to create one.</Text>
         </View>
       ) : (
-        <FlatList
-          data={sorted}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => item.uri}
           renderItem={({ item }) => <NoteListItem note={item} />}
+          renderSectionHeader={({ section }) =>
+            section.title ? (
+              <Text style={styles.sectionHeader}>{section.title}</Text>
+            ) : null
+          }
+          stickySectionHeadersEnabled={false}
           onRefresh={reload}
           refreshing={isLoading}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -92,5 +104,14 @@ const styles = StyleSheet.create({
   headerButtons: { flexDirection: 'row', gap: 16, alignItems: 'center' },
   headerButtonText: { fontSize: 15, opacity: 0.8 },
   headerButtonTextBold: { fontSize: 15, fontWeight: '700', color: '#3f51b5' },
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '600',
+    opacity: 0.5,
+    textTransform: 'uppercase',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 6,
+  },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: '#00000022' },
 });
