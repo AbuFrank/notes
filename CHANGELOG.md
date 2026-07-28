@@ -17,4 +17,6 @@ vault folder via Storage Access Framework.
 - Fixes found while testing on-device: SAF file creation no longer gets a stray `.txt` appended
   to `.md` filenames; note routing uses filename instead of the raw vault URI (which broke on
   reopen); the keyboard no longer covers the last checklist item / "+ Add item" button; patched
-  a `react-native-draggable-flatlist` ref-measurement bug via `patch-package`.
+  a `react-native-draggable-flatlist` ref-measurement bug via `patch-package`; deleting a
+  checklist item wasn't persisting (SAF overwrite left old trailing bytes on shorter writes) —
+  saves now delete-and-recreate the note file instead of overwriting in place.

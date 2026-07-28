@@ -39,8 +39,25 @@ export async function readNoteFile(uri: string): Promise<string> {
   return StorageAccessFramework.readAsStringAsync(uri);
 }
 
-export async function writeNoteFile(uri: string, content: string): Promise<void> {
-  await StorageAccessFramework.writeAsStringAsync(uri, content);
+/** Overwrites an existing note by deleting and recreating it rather than
+ * writing the new content directly to the old uri. SAF's writeAsStringAsync
+ * opens the file in "w" mode, and whether that actually truncates trailing
+ * bytes from the previous (longer) content is up to the storage provider —
+ * on at least the local storage provider, writing content *shorter* than
+ * what's on disk left the old tail behind (e.g. a deleted checklist item
+ * reappearing after reopening the note), while same-length or longer writes
+ * looked fine. Delete+recreate sidesteps provider truncation behavior
+ * entirely since the new document is always empty before it's written. */
+export async function writeNoteFile(
+  directoryUri: string,
+  uri: string,
+  filename: string,
+  content: string
+): Promise<VaultFile> {
+  await StorageAccessFramework.deleteAsync(uri);
+  const newUri = await StorageAccessFramework.createFileAsync(directoryUri, filename, 'application/octet-stream');
+  await StorageAccessFramework.writeAsStringAsync(newUri, content);
+  return { uri: newUri, name: deriveName(newUri) };
 }
 
 /** Creates a new file in the vault folder and writes its initial content.

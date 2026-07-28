@@ -13,6 +13,15 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
   `application/octet-stream` has no canonical extension, so nothing gets appended.
   `createNoteFile` also always re-derives the real on-disk name from the returned uri rather than
   trusting the requested name, as a second line of defense against any provider doing this.
+- **Saving an existing note deletes and recreates the file rather than overwriting it in place.**
+  SAF's `writeAsStringAsync` opens the target in `"w"` mode, and whether that truncates trailing
+  bytes from the previous content is up to the storage provider — on at least the local storage
+  provider, writing content *shorter* than what's already on disk left the old tail behind (e.g. a
+  deleted checklist item reappearing after reopening the note), while same-length or longer writes
+  were fine. `writeNoteFile` in `vaultFs.ts` now takes `directoryUri` + `filename` and does
+  delete-then-create against a fresh (possibly new) uri; `saveNote` and `NoteEditor.performSave`
+  propagate that uri back into `fileRef.current` after every save. Don't revert this to a plain
+  `writeAsStringAsync(uri, content)` overwrite — it silently resurrects deleted content.
 - **Filenames are opaque timestamps, decoupled from the title.** `resolveNewFilename` in
   `src/vault/filenames.ts` assigns `YY-MM-DD-HH-mm.md` once at creation; it's never touched
   again. The title lives inside the file as an `# H1` heading (parsed/serialized in

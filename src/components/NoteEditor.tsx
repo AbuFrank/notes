@@ -97,7 +97,15 @@ export function NoteEditor({
       created: createdAtRef.current ?? new Date().toISOString(),
       updated: new Date().toISOString(),
     };
-    const saved = await saveNote(fileRef.current.uri, fileRef.current.filename, title, frontmatter, body);
+    const saved = await saveNote(
+      directoryUri,
+      fileRef.current.uri,
+      fileRef.current.filename,
+      title,
+      frontmatter,
+      body
+    );
+    fileRef.current = { uri: saved.uri, filename: saved.filename };
     upsertNoteSummary({
       uri: saved.uri,
       filename: saved.filename,

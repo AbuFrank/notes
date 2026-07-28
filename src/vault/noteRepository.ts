@@ -54,6 +54,7 @@ export async function createNote(
 }
 
 export async function saveNote(
+  directoryUri: string,
   uri: string,
   filename: string,
   title: string,
@@ -62,8 +63,8 @@ export async function saveNote(
 ): Promise<NoteContent> {
   const updated: NoteFrontmatter = { ...frontmatter, updated: new Date().toISOString() };
   const content = serializeNoteFile(updated, title, body);
-  await writeNoteFile(uri, content);
-  return { uri, filename, title, frontmatter: updated, body };
+  const file = await writeNoteFile(directoryUri, uri, filename, content);
+  return { uri: file.uri, filename: file.name, title, frontmatter: updated, body };
 }
 
 export async function deleteNote(uri: string): Promise<void> {
