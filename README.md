@@ -1,56 +1,100 @@
-# Welcome to your Expo app 👋
+# Notes
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+An Android note-taking app (Expo / React Native) that reads and writes its notes directly as
+`.md` files into an Obsidian vault folder, so notes stay usable inside Obsidian itself.
 
-## Get started
+## Features
 
-1. Install dependencies
+- Notes are plain markdown files with YAML frontmatter, saved directly into a vault folder you
+  pick once via Android's Storage Access Framework — no cloud sync, no Obsidian app required.
+- Multiple tags per note, stored in both frontmatter (`tags: [...]`) and inline `#hashtags`.
+  Browse all tags and tap one to see the notes under it.
+- Todo mode: turn a note's body into a checklist (`- [ ]` / `- [x]`). Checking an item moves it
+  to the bottom of the list; each item has an "×" to delete it.
 
+## Local development (Expo Go)
+
+No Android Studio or emulator needed — just a physical Android phone (11+) and Expo Go, on the
+same Wi-Fi network as your computer:
+
+1. Install **Expo Go** from the Play Store on your phone.
+2. From the project directory, start the dev server:
    ```bash
    npm install
-   ```
-
-2. Start the app
-
-   ```bash
    npx expo start
    ```
+3. Scan the printed QR code with the Expo Go app (or your phone's camera). The app loads over
+   the network — no build or install step.
+4. On first launch, tap **Choose folder** and pick a vault folder. Point it at a **scratch test
+   folder** first (not your real vault) until you've tried the core flows — a throwaway folder
+   or subfolder works fine, it just needs Android 11+ for the SAF picker.
+5. Try the full loop: create a note, add a couple of tags, confirm the Tags screen filters
+   correctly, toggle Todo mode, check an item off (it should sink to the bottom), delete a line
+   with "×" — then open that same folder directly in Obsidian and confirm it all renders there
+   too.
 
-In the output, you'll find options to open the app in a
+Prefer an emulator instead of a physical device? That needs Android Studio + the Android SDK
+installed first (not set up in this repo/environment) — then `npx expo start --android` will
+launch it. A physical device is the faster path if you have one.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+`expo-file-system`'s Storage Access Framework calls are expected to work inside Expo Go for the
+SDK version this project pins — no custom dev client should be required. If you hit an error
+suggesting the module isn't available, that's the signal to build a custom dev client instead
+(see below, using a `development` EAS profile).
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Production builds
 
-## Get a fresh project
+This app isn't intended for the Play Store — the practical "production" path is building an
+installable APK and sideloading it onto your own phone, via [EAS Build](https://docs.expo.dev/build/introduction/)
+(Expo's cloud build service; free tier is enough for personal use, and no local Android SDK is
+required since the build runs remotely).
 
-When you're ready, run:
+1. Install the EAS CLI and log in (requires a free Expo account):
+   ```bash
+   npx eas-cli login
+   ```
+2. Configure the project for EAS Build (creates `eas.json`, links the project to your Expo
+   account):
+   ```bash
+   npx eas-cli build:configure
+   ```
+3. Add (or edit) a `preview` profile in `eas.json` so it produces a directly-installable `.apk`
+   rather than the Play-Store-only `.aab` format:
+   ```json
+   {
+     "build": {
+       "preview": {
+         "android": {
+           "buildType": "apk"
+         }
+       }
+     }
+   }
+   ```
+4. Kick off the build:
+   ```bash
+   npx eas-cli build --platform android --profile preview
+   ```
+   This builds in the cloud and prints a download link when it finishes (also viewable at
+   expo.dev under your account).
+5. On your phone, open that link (or scan the QR code EAS prints), download the `.apk`, and
+   install it — Android will prompt to allow installing from this source the first time.
 
-```bash
-npm run reset-project
-```
+Re-run step 4 any time you want an updated build; each run produces a new APK to reinstall over
+the old one (SAF vault access should persist across the reinstall as long as the app isn't
+uninstalled first — Android ties the granted permission to the app's package, not the specific
+build).
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Known limitation
 
-### Other setup steps
+Obsidian's Android app doesn't always pick up changes written by another app while a note is
+open in Obsidian itself. If you have the same note open in both apps, close and reopen it in
+Obsidian to see the latest content.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Project layout
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- `src/app/` — screens (Expo Router, file-based routing)
+- `src/vault/` — all vault file I/O: the SAF wrapper (`vaultFs.ts`), frontmatter parsing,
+  todo-checklist serialization, filename handling, and note CRUD
+- `src/context/VaultContext.tsx` — holds the picked vault folder, the note/tag index, and reload
+- `src/components/` — `NoteEditor`, `TagEditor`, `NoteListItem`

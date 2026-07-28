@@ -1,98 +1,96 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Stack, useRouter } from 'expo-router';
+import { useMemo } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { NoteListItem } from '@/components/NoteListItem';
+import { useVault } from '@/context/VaultContext';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
+export default function NoteListScreen() {
+  const { directoryUri, isLoading, error, notes, connectVault, reload } = useVault();
+  const router = useRouter();
+
+  const sorted = useMemo(
+    () => [...notes].sort((a, b) => (a.updated < b.updated ? 1 : -1)),
+    [notes]
+  );
+
+  if (!directoryUri) {
     return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+      <View style={styles.centered}>
+        <Text style={styles.onboardingTitle}>Connect your Obsidian vault</Text>
+        <Text style={styles.onboardingBody}>
+          Pick the folder (your vault, or a subfolder of it) where notes created here should be
+          saved as .md files.
+        </Text>
+        {error && <Text style={styles.errorText}>{error}</Text>}
+        <Pressable style={styles.primaryButton} onPress={connectVault}>
+          <Text style={styles.primaryButtonText}>Choose folder</Text>
+        </Pressable>
+      </View>
     );
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
-
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+    <View style={styles.container}>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <View style={styles.headerButtons}>
+              <Pressable onPress={() => router.push('/tags')} hitSlop={8}>
+                <Text style={styles.headerButtonText}>Tags</Text>
+              </Pressable>
+              <Pressable onPress={() => router.push('/note/new')} hitSlop={8}>
+                <Text style={styles.headerButtonTextBold}>+ New</Text>
+              </Pressable>
+            </View>
+          ),
+        }}
+      />
+      {isLoading && notes.length === 0 ? (
+        <View style={styles.centered}>
+          <ActivityIndicator />
+        </View>
+      ) : error ? (
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>{error}</Text>
+          <Pressable style={styles.primaryButton} onPress={connectVault}>
+            <Text style={styles.primaryButtonText}>Re-pick folder</Text>
+          </Pressable>
+        </View>
+      ) : sorted.length === 0 ? (
+        <View style={styles.centered}>
+          <Text style={styles.onboardingBody}>No notes yet. Tap + New to create one.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={sorted}
+          keyExtractor={(item) => item.uri}
+          renderItem={({ item }) => <NoteListItem note={item} />}
+          onRefresh={reload}
+          refreshing={isLoading}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+  container: { flex: 1 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 },
+  onboardingTitle: { fontSize: 20, fontWeight: '600', textAlign: 'center' },
+  onboardingBody: { fontSize: 15, textAlign: 'center', opacity: 0.7 },
+  errorText: { fontSize: 14, color: '#c0392b', textAlign: 'center' },
+  primaryButton: {
+    backgroundColor: '#3f51b5',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 8,
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  primaryButtonText: { color: 'white', fontWeight: '600' },
+  headerButtons: { flexDirection: 'row', gap: 16, alignItems: 'center' },
+  headerButtonText: { fontSize: 15, opacity: 0.8 },
+  headerButtonTextBold: { fontSize: 15, fontWeight: '700', color: '#3f51b5' },
+  separator: { height: StyleSheet.hairlineWidth, backgroundColor: '#00000022' },
 });
